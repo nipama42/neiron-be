@@ -22,6 +22,9 @@ export class SupportMessage extends Model {
   @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
   declare read_by_admin: boolean;
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  declare read_by_user: boolean;
+
   @Column({ type: DataType.DATE, allowNull: false })
   declare created_at: Date;
 }

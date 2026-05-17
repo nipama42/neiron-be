@@ -165,6 +165,10 @@ export default () => {
     kieRateWindowMs: clamp(Number(process.env.KIE_RATE_WINDOW_MS) || 10_000, 1_000, 120_000),
     kieRateMaxWaitMs: clamp(Number(process.env.KIE_RATE_MAX_WAIT_MS) || 180_000, 10_000, 600_000),
     kieMaxConcurrentRequests: clamp(Number(process.env.KIE_MAX_CONCURRENT) || 120, 1, 600),
+    /** Одновременных генераций на одного пользователя */
+    kieParallelMaxPerUser: clamp(Number(process.env.KIE_PARALLEL_MAX_PER_USER) || 3, 1, 200),
+    /** Активных воркеров очереди generation_jobs (все типы вместе) */
+    generationQueueMaxActive: clamp(Number(process.env.GENERATION_QUEUE_MAX_ACTIVE) || 80, 1, 200),
     kieSunoCallbackUrl,
 
     // ── NeuroAPI ──────────────────────────────────────────────────────────────
@@ -187,6 +191,13 @@ export default () => {
     paymentSbpEnabled: ['1', 'true', 'yes'].includes(
       normalizeEnv(process.env.PAYMENT_SBP_ENABLED).toLowerCase(),
     ),
+    /** Интервал фонового опроса pending СБП (мс) */
+    sbpPollIntervalMs: clamp(Number(process.env.SBP_POLL_INTERVAL_MS) || 30_000, 10_000, 300_000),
+    /** Не опрашивать заявки старше N часов; помечать failed */
+    sbpPollMaxAgeHours: clamp(Number(process.env.SBP_POLL_MAX_AGE_HOURS) || 48, 1, 168),
+    sbpPollBatchSize: clamp(Number(process.env.SBP_POLL_BATCH_SIZE) || 50, 1, 200),
+    /** Пауза между запросами к 1Payment (мс) */
+    sbpPollGapMs: clamp(Number(process.env.SBP_POLL_GAP_MS) || 250, 0, 5_000),
     onepaymentPartnerId: normalizeEnv(process.env.ONEPAYMENT_PARTNER_ID),
     onepaymentProjectId: normalizeEnv(process.env.ONEPAYMENT_PROJECT_ID),
     onepaymentSecretKey: normalizeEnv(process.env.ONEPAYMENT_SECRET_KEY),

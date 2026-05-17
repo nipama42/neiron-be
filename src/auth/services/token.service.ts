@@ -36,4 +36,22 @@ export class TokenService {
       { secret, expiresIn: `${ttl}m` },
     );
   }
+
+  /**
+   * Верифицирует refresh-токен и возвращает userId (sub).
+   * Возвращает null при невалидном, истёкшем или не-refresh токене.
+   */
+  verifyRefreshToken(token: string): string | null {
+    const secret = this.config.get<string>('jwtSecret')!;
+    try {
+      const payload = this.jwt.verify(token, { secret }) as {
+        sub?: string;
+        type?: string;
+      };
+      if (payload?.type !== 'refresh' || typeof payload.sub !== 'string') return null;
+      return payload.sub;
+    } catch {
+      return null;
+    }
+  }
 }

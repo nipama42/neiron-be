@@ -10,8 +10,19 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('telegram')
-  telegramAuth(@Body() body: Record<string, unknown>) {
-    return this.authService.telegramAuth();
+  @ApiOperation({ summary: 'Вход через Telegram Web App (initData)' })
+  @Throttle({ default: { limit: 60, ttl: 900_000 } })
+  telegramAuth(
+    @Body()
+    body: {
+      initData?: string;
+      refCode?: string;
+      partnerSlug?: string;
+      partnerCode?: string;
+      telegramStartCode?: string;
+    },
+  ) {
+    return this.authService.telegramAuth(body);
   }
 
   @Post('email/register')
@@ -48,6 +59,16 @@ export class AuthController {
     return this.authService.recoverySetPassword();
   }
 
+  @Post('token/refresh')
+  @ApiOperation({ summary: 'Обновить access-токен по refresh-токену' })
+  @Throttle({ default: { limit: 30, ttl: 900_000 } })
+  tokenRefresh(@Body() body: { refreshToken?: string }) {
+    if (!body?.refreshToken) {
+      throw new BadRequestException({ error: 'refreshToken required' });
+    }
+    return this.authService.tokenRefresh(body.refreshToken);
+  }
+
   @Post('email/login')
   @ApiOperation({ summary: 'Вход по email и паролю' })
   @ApiBody({
@@ -68,12 +89,14 @@ export class AuthController {
   }
 
   @Get('telegram/bot-login-url')
-  botLoginUrl(@Query('partnerSlug') _partnerSlug?: string) {
-    return this.authService.botLoginUrl();
+  @ApiOperation({ summary: 'Создать ссылку для входа через Telegram-бот' })
+  botLoginUrl(@Query('partnerSlug') partnerSlug?: string) {
+    return this.authService.botLoginUrl(partnerSlug);
   }
 
   @Get('telegram/bot-login-poll')
-  botLoginPoll(@Query('token') _token?: string) {
-    return this.authService.botLoginPoll();
+  @ApiOperation({ summary: 'Опросить результат бот-авторизации' })
+  botLoginPoll(@Query('token') token?: string) {
+    return this.authService.botLoginPoll(token);
   }
 }

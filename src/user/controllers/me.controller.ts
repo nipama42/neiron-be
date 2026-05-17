@@ -14,6 +14,7 @@ import { BEARER_SCHEME } from '../../swagger/constants';
 import { JwtAuthGuard } from '../../lib/auth/guards/jwt-auth.guard';
 import { CurrentUserId } from '../../lib/decorators/current-user-id.decorator';
 import { UserService } from '../services/user.service';
+import { SupportService } from '../services/support.service';
 import { notImplemented } from '../../lib/common/not-implemented.util';
 
 @ApiTags('me')
@@ -21,7 +22,10 @@ import { notImplemented } from '../../lib/common/not-implemented.util';
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class MeController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly supportService: SupportService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Текущий профиль' })
@@ -106,13 +110,17 @@ export class MeController {
 
   @Get('me/support/unread')
   @ApiOperation({ summary: 'Кол-во непрочитанных сообщений поддержки' })
-  supportUnread() {
-    return notImplemented('GET /me/support/unread');
+  async supportUnread(@CurrentUserId() userId: string) {
+    const unread = await this.supportService.countUnreadSupportForUser(userId);
+    return { unread };
   }
 
   @Get('me/support/messages')
-  supportMessages() {
-    return notImplemented('GET /me/support/messages');
+  @ApiOperation({ summary: 'История сообщений поддержки (маркирует как прочитанные)' })
+  async supportMessages(@CurrentUserId() userId: string) {
+    const messages = await this.supportService.listUserSupportMessages(userId);
+    await this.supportService.markSupportReadByUser(userId);
+    return { messages, unread: 0 };
   }
 
   @Post('me/support/typing')
