@@ -1,99 +1,232 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# neiron-be — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS-бэкенд для платформы Neiron. Предоставляет REST API для фронтенда и Telegram-бота, управляет пользователями, аутентификацией, каталогом, платёжными операциями и партнёрской программой.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Содержание
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Архитектура](#архитектура)
+- [Технологический стек](#технологический-стек)
+- [Быстрый старт (разработка)](#быстрый-старт-разработка)
+- [Переменные окружения](#переменные-окружения)
+- [Миграции базы данных](#миграции-базы-данных)
+- [API-справочник](#api-справочник)
+- [Структура проекта](#структура-проекта)
+- [Docker](#docker)
+- [Тесты](#тесты)
 
-## Project setup
+---
 
-```bash
-$ npm install
+## Архитектура
+
+```
+neiron-fe  ──HTTP──►  neiron-proxy  ──HTTP──►  neiron-be:3000
+neiron-tg-bot  ────────────────────────────────►  PostgreSQL (shared)
 ```
 
-## Compile and run the project
+Бэкенд работает за обратным прокси (neiron-proxy). Прямой доступ по порту `3000` используется только внутри Docker-сети.
+
+---
+
+## Технологический стек
+
+| Слой | Технология |
+|------|-----------|
+| Фреймворк | NestJS 10 (TypeScript) |
+| База данных | PostgreSQL + Sequelize ORM |
+| Аутентификация | JWT (access + refresh tokens), Telegram initData HMAC |
+| Логирование | pino / nestjs-pino |
+| HTTP-сервер | Fastify (через @nestjs/platform-fastify) |
+| Документация | Swagger / OpenAPI (в dev-режиме) |
+| Контейнеризация | Docker |
+
+---
+
+## Быстрый старт (разработка)
+
+### Требования
+
+- Node.js 20+
+- PostgreSQL 15+
+- npm
+
+### Установка
 
 ```bash
-# development
-$ npm run start
+git clone https://github.com/your-org/neiron-be.git
+cd neiron-be
 
-# watch mode
-$ npm run start:dev
+npm install
 
-# production mode
-$ npm run start:prod
+cp .env.example .env
+# Отредактируйте .env: DATABASE_URL, JWT_SECRET, BOT_TOKEN
 ```
 
-## Run tests
+### Запуск
 
 ```bash
-# unit tests
-$ npm run test
+# Применить миграции
+psql "$DATABASE_URL" -f migrations/037_bot_login_sessions.sql
 
-# e2e tests
-$ npm run test:e2e
+# Dev-режим с hot-reload
+npm run start:dev
 
-# test coverage
-$ npm run test:cov
+# Production-сборка
+npm run build
+npm run start:prod
 ```
 
-## Deployment
+Swagger UI доступен по адресу `http://localhost:3000/api` (только в `NODE_ENV=development`).
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Переменные окружения
+
+Скопируйте `.env.example` в `.env` и заполните:
+
+| Переменная | Обязательная | Описание |
+|-----------|:---:|---------|
+| `PORT` | — | HTTP-порт сервера (по умолчанию `3000`) |
+| `NODE_ENV` | — | `development` / `production` |
+| `DATABASE_URL` | ✓ | Строка подключения PostgreSQL |
+| `PG_POOL_MAX` | — | Макс. кол-во соединений в пуле (по умолчанию `20`) |
+| `JWT_SECRET` | ✓ | Секрет для подписи JWT. **Должен совпадать** с `JWT_SECRET` в `neiron-tg-bot` |
+| `CORS_ORIGINS` | ✓ | Разрешённые CORS-origins через запятую (напр. `https://neiron.space`) |
+| `BOT_TOKEN` | ✓ | Telegram Bot Token (для верификации `initData`) |
+| `PUBLIC_TG_BOT_USERNAME` | ✓ | Юзернейм бота без `@` (для генерации bot-login URL) |
+| `BOT_USERNAME` | ✓ | Аналогично `PUBLIC_TG_BOT_USERNAME` (исторически две переменные) |
+| `WEB_APP_URL` | ✓ | URL фронтенда (напр. `https://neiron.space`) |
+
+---
+
+## Миграции базы данных
+
+Миграции хранятся в `migrations/` в виде SQL-файлов. Применяются вручную или через CI:
 
 ```bash
-$ npm install -g mau
-$ mau deploy
+psql "$DATABASE_URL" -f migrations/037_bot_login_sessions.sql
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### `037_bot_login_sessions.sql`
 
-## Resources
+Создаёт таблицу `bot_login_sessions` — разделяемое хранилище сессий bot-login flow между `neiron-be` и `neiron-tg-bot`.
 
-Check out a few resources that may come in handy when working with NestJS:
+| Колонка | Тип | Описание |
+|---------|-----|---------|
+| `token` | TEXT PK | Уникальный токен сессии (UUID) |
+| `partner_slug` | TEXT | Слаг партнёра (если был реферальный deep link) |
+| `status` | TEXT | `pending` → `ok` |
+| `jwt_token` | TEXT | Access JWT (заполняется ботом после авторизации) |
+| `refresh_token` | TEXT | Refresh JWT |
+| `user_json` | JSONB | Сериализованный объект пользователя |
+| `created_at` | TIMESTAMPTZ | Время создания |
+| `expires_at` | TIMESTAMPTZ | TTL 5 минут, индексировано |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## API-справочник
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Аутентификация (`/auth`)
 
-## Stay in touch
+| Метод | Путь | Описание |
+|-------|------|---------|
+| `GET` | `/auth/telegram/bot-login-url` | Генерирует одноразовую ссылку для входа через бота |
+| `GET` | `/auth/telegram/bot-login-poll?token=…` | Polling: ожидает завершения bot-login сессии |
+| `POST` | `/auth/telegram` | Авторизация через Telegram Web App (`initData`) |
+| `POST` | `/auth/token/refresh` | Обновление access/refresh токенов |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+#### `POST /auth/telegram` — тело запроса
 
-## License
+```json
+{
+  "initData": "query_id=...&user=...&hash=...",
+  "ref": "optional-referral-code"
+}
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+#### `POST /auth/token/refresh` — тело запроса
+
+```json
+{
+  "refreshToken": "eyJ..."
+}
+```
+
+#### Ответ на успешную авторизацию (оба метода)
+
+```json
+{
+  "token": "eyJ...",
+  "refreshToken": "eyJ...",
+  "user": { "id": "uuid", "telegramId": 123456, "username": "...", ... }
+}
+```
+
+### Прочие модули
+
+| Префикс | Описание |
+|---------|---------|
+| `/user` | Профиль, баланс, история монет |
+| `/catalog` | Каталог AI-продуктов/услуг |
+| `/payment` | Платёжные сессии, история транзакций |
+| `/partner` | Партнёрская программа, рефералы |
+| `/admin` | Административные эндпоинты (требуют роль `admin`) |
+| `/health` | Health-check (`200 OK`) |
+
+---
+
+## Структура проекта
+
+```
+neiron-be/
+├── src/
+│   ├── auth/             # JWT, bot-login, Telegram initData
+│   │   ├── controllers/
+│   │   └── services/
+│   │       ├── auth.service.ts
+│   │       ├── bot-login.service.ts
+│   │       ├── token.service.ts
+│   │       └── telegram-verify.service.ts
+│   ├── user/             # Пользователи, Telegram-синхронизация
+│   ├── catalog/          # Каталог услуг
+│   ├── payment/          # Платежи
+│   ├── partner/          # Партнёры, рефералы
+│   ├── admin/            # Административный модуль
+│   ├── health/           # GET /health
+│   └── lib/
+│       └── auth/models/  # Sequelize-модели (User, Partner, BotLoginSession, …)
+├── migrations/           # SQL-миграции
+├── Dockerfile
+└── .env.example
+```
+
+---
+
+## Docker
+
+### Локальная сборка
+
+```bash
+docker build -t neiron-be .
+docker run -p 3000:3000 --env-file .env neiron-be
+```
+
+### В составе стека
+
+Используйте `general-deploy/docker-compose.yml`. Сервис называется `neiron-be`, доступен по имени хоста `neiron-be:3000` внутри Docker-сети `server-network`.
+
+---
+
+## Тесты
+
+```bash
+# Unit-тесты
+npm run test
+
+# E2E-тесты
+npm run test:e2e
+
+# Покрытие
+npm run test:cov
+```
